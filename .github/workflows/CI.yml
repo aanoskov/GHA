@@ -1,6 +1,7 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+#Continious Integration and Delivery
+name: CI/CD
 
 # Controls when the action will run. 
 on:
@@ -14,46 +15,55 @@ on:
   workflow_dispatch:
 
 jobs:
-  CodeStyle:
-    runs-on: [ubuntu-latest]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install dependencies
-        run: pip install flake8
-      - name: Codestyle
-        run: python -m flake8 ./ --ignore=F401,E402
+   CodeStyle:
+     runs-on: [ubuntu-latest]
+     steps:
+       - uses: actions/checkout@v2
+       - name: Install dependencies
+         run: pip install flake8
+       - name: Codestyle
+         run: python -m flake8 ./ --ignore=F401,E402
 
-  Tests:
-    needs: CodeStyle
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: sys info
-        run:
-          echo $TELEGRAM_TO_DEBUG
-          echo $TELEGRAM_TOKEN_DEBUG 
-      - name: tests
-        run: |
-          pip3 install -e '.[test]'
-          python3 -m coverage run -m pytest
-          python3 -m coverage html -d coverage_html
-          zip -r coverage.zip coverage_html
+   Tests:
+     needs: CodeStyle
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v2
+       - name: sys info
+         run:
+           echo $TELEGRAM_TO_DEBUG
+           echo $TELEGRAM_TOKEN_DEBUG 
+       - name: tests
+         run: |
+           pip3 install -e '.[test]'
+           python3 -m coverage run -m pytest
+           python3 -m coverage html -d coverage_html
+           zip -r coverage.zip coverage_html
           
-      - name: upload artifact
-        uses: actions/upload-artifact@v2
+       - name: upload artifact
+         uses: actions/upload-artifact@v2
+         with:
+           name: coverage_noskov
+           path: coverage_html
+           retention-days: 1
+  Deploy:
+    runs-on: ubuntu-latest
+    needs: Tests
+    steps:
+      - uses: actions/checkout@v2
+      - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
         with:
-          name: coverage_noskov
-          path: coverage_html
-          retention-days: 1
-
+          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+          heroku_app_name: "flask-calculate" #Must be unique in Heroku
+          heroku_email: ${{secrets.HEROKU_EMAIL}}
       
-      - name: send artifact to telegram
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_TO_DEBUG }}
-          token: ${{ secrets.TELEGRAM_TOKEN_DEBUG }}
-          document: ./coverage.zip
-          message: ✅ ©Aanoskov push
+    #  - name: send artifact to telegram
+    #    uses: appleboy/telegram-action@master
+    #    with:
+    #      to: ${{ secrets.TELEGRAM_TO_DEBUG }}
+    #      token: ${{ secrets.TELEGRAM_TOKEN_DEBUG }}
+    #      document: ./coverage.zip
+    #      message: ✅ ©Aanoskov push
           
 
 #${{ secrets.TELEGRAM_TO_DEBUG }}
@@ -62,7 +72,7 @@ jobs:
 
   TelegramNotification:
     runs-on: ubuntu-latest
-    needs: Tests
+    needs: Deploy
     if: failure()
     steps:
       - name: send error message
