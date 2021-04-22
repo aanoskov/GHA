@@ -46,7 +46,7 @@ jobs:
           name: coverage_noskov
           path: coverage_html
           retention-days: 1
-  deploy:
+  Deploy:
     runs-on: ubuntu-latest
     needs: Tests
     steps:
@@ -72,7 +72,7 @@ jobs:
 
   TelegramNotification:
     runs-on: ubuntu-latest
-    needs: deploy
+    needs: Deploy
     if: failure()
     steps:
       - name: send error message
