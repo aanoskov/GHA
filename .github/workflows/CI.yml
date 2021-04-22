@@ -19,7 +19,7 @@ jobs:
     runs-on: win_local
     steps:
       - name: env
-      - run: |
+        run: |
           ls
           echo "hello from github" >> hello.txt
           PWD
